@@ -68,12 +68,12 @@ docker run -p 3001:3001 video-downloader
 
 1. Tag the image:
 ```
-docker tag video-downloader kunalsharma12345/video-downloader:latest
+docker tag video-downloader <dockerhub-username>/video-downloader:latest
 ```
 
 2. Push to Docker Hub:
 ```
-docker push kunalsharma12345/video-downloader:latest
+docker push <dockerhub-username>/video-downloader:latest
 ```
 
 ## File Cleanup
