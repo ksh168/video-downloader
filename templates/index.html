@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Downloader</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <h2>Video Downloader</h2>
+      <form id="downloadForm">
+        <input
+          type="text"
+          id="videoUrl"
+          placeholder="Enter Video URL"
+          required
+        />
+        <input type="text" id="apiKey" placeholder="Enter API Key" required />
+        <button type="submit">Download Video</button>
+      </form>
+      <div id="status"></div>
+      <div id="loader" class="loader" style="display: none;"></div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  </body>
+</html>
