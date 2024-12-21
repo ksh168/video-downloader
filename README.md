@@ -79,8 +79,7 @@ docker push <dockerhub-username>/video-downloader:latest
 ## File Cleanup
 
 - Local downloads are automatically cleaned up after successful S3 upload
-- S3 files older than 2 hours are automatically deleted
-- Local files older than 1 hour are cleaned up via cron job via apscheduler
+- S3 files older than 2 hours are automatically deleted using apscheduler
 
 ## Development
 
