@@ -269,7 +269,7 @@ def download_video_api():
             500,
         )
 
-    # Upload the downloaded file to Azure Blob Storage
+    # Upload the downloaded file to blob Storage
     filename = download_req.get("filename")
     if filename:
         download_url = upload_to_s3_and_get_url(
