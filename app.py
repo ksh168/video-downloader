@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 
+from utils.proxy_handler import try_download_with_proxy
+
 load_dotenv()
 
 import os
@@ -23,6 +25,8 @@ from flask_socketio import SocketIO
 from utils.upload_to_s3 import upload_to_s3_and_get_url
 from flask_socketio import join_room
 from utils.cleanup_s3 import init_cleanup_scheduler
+from constants import COMMON_BROWSERS_USER_AGENTS
+import random
 
 
 # Configure logging
@@ -101,7 +105,7 @@ class VideoDownloader:
         self, url: str, options: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Download a video from the given URL.
+        Download a video from the given URL with browser impersonation.
 
         :param url: URL of the video to download
         :param options: Optional dictionary of yt-dlp download options
@@ -115,6 +119,17 @@ class VideoDownloader:
             "no_color": True,
             "progress_hooks": [self._progress_hook],
             "nooverwrites": True,
+            # Add browser impersonation
+            "http_headers": {
+                "User-Agent": random.choice(COMMON_BROWSERS_USER_AGENTS),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-us,en;q=0.5",
+                "Sec-Fetch-Mode": "navigate",
+            },
+            # Add additional options to avoid detection
+            "nocheckcertificate": True,
+            "ignoreerrors": False,  # Changed to catch errors
+            "no_warnings": False,   # Changed to see warnings
         }
 
         # Update default options with user-provided options
@@ -122,21 +137,46 @@ class VideoDownloader:
             default_opts.update(options)
 
         try:
+            # raise Exception("test")
+
             with yt_dlp.YoutubeDL(default_opts) as ydl:
                 # Extract video information
                 info_dict = ydl.extract_info(url, download=True)
 
-                # Prepare return information
+                if info_dict:
+                    # Prepare return information
+                    return {
+                        "success": True,
+                        "title": info_dict.get("title"),
+                        "filename": ydl.prepare_filename(info_dict),
+                        "url": url,
+                        "extractor": info_dict.get("extractor"),
+                        "download_directory": self.output_dir,
+                    }
+
                 return {
-                    "success": True,
-                    "title": info_dict.get("title"),
-                    "filename": ydl.prepare_filename(info_dict),
-                    "url": url,
-                    "extractor": info_dict.get("extractor"),
-                    "download_directory": self.output_dir,  # Add download directory to return info
+                    "success": False,
+                    "error": "Failed to extract video information",
                 }
 
         except Exception as e:
+            # Try proxy methods if direct download fails
+            proxy_result = try_download_with_proxy(url, default_opts)
+            if proxy_result and proxy_result["success"]:
+                info_dict = proxy_result["info_dict"]
+                with yt_dlp.YoutubeDL(default_opts) as ydl:
+
+                    return {
+                        "success": True,
+                        "title": info_dict.get("title"),
+                        "filename": ydl.prepare_filename(info_dict),
+                        "url": url,
+                        "extractor": info_dict.get("extractor"),
+                        "download_directory": self.output_dir,
+                        "method": proxy_result["method"],
+                    }
+
+            # If all methods fail, return error
             return {"success": False, "error": str(e), "url": url}
 
     def _progress_hook(self, d: Dict[str, Any]) -> None:
@@ -203,19 +243,19 @@ def index():
 def download_video_task(url, client_id):
     try:
         downloader = VideoDownloader()
-        # Add client_id to the downloader instance
         downloader.client_id = client_id
         result = downloader.download(url)
 
-        # Check if download was successful
         if not result["success"]:
             app.logger.error(f"Download failed: {result.get('error', 'Unknown error')}")
         else:
-            app.logger.info(f"Successfully downloaded video: {result['filename']}")
+            app.logger.info(
+                f"Successfully downloaded video: {result['filename']} using method: {result.get('method', 'unknown')}"
+            )
 
         return result
     except Exception as e:
-        app.logger.exception("Unexpected error during download")
+        app.logger.exception("Unexpected error during download", str(e))
         return {"success": False, "error": str(e), "filename": None}
 
 
