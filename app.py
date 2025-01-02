@@ -228,6 +228,7 @@ def download_video_api():
     Expected JSON payload:
     {
         "url": "video_url_to_download",
+        "client_id": "unique_client_id"
     }
     """
     # Log the request
