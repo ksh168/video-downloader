@@ -5,22 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Video Downloader</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body>
+    <div class="ad-space-top">
+      <!-- Space for future ads -->
+      <div class="ad-placeholder">Advertisement Space</div>
+    </div>
+
     <div class="container">
-      <h2>Video Downloader</h2>
+      <h1>Video Downloader</h1>
+      <p class="subtitle">Download videos from various platforms in high quality</p>
+      
       <form id="downloadForm">
-        <input
-          type="text"
-          id="videoUrl"
-          placeholder="Enter Video URL"
-          required
-        />
-        <button type="submit">Download Video</button>
+        <div class="input-group">
+          <input
+            type="text"
+            id="videoUrl"
+            placeholder="Paste video URL here"
+            required
+          />
+          <button type="submit">Download Now</button>
+        </div>
       </form>
+
       <div id="status"></div>
       <div id="loader" class="loader" style="display: none;"></div>
+
+      <div class="platform-info">
+        <div class="support-section">
+          <h3>✅ Supported Platforms</h3>
+          <ul>
+            <li>Dailymotion</li>
+            <li>Vimeo</li>
+            <li>Instagram</li>
+            <li>Facebook</li>
+            <li>Twitter/X</li>
+            <li>TikTok</li>
+          </ul>
+        </div>
+        
+        <div class="support-section not-supported">
+          <h3>❌ Not Supported (Yet)</h3>
+          <ul>
+            <li>YouTube</li>
+          </ul>
+        </div>
+      </div>
     </div>
+
+    <div class="ad-space-bottom">
+      <!-- Space for future ads -->
+      <div class="ad-placeholder">Advertisement Space</div>
+    </div>
+
+    <footer>
+      <p>⚡ Fast, Free, and No Registration Required</p>
+    </footer>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   </body>
