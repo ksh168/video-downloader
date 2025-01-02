@@ -1,11 +1,9 @@
 from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
-from constants import (
-    S3_BUCKET_NAME,
-)
 from utils.get_s3_client import get_s3_client
 
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 
 def cleanup_old_files():
     s3_client = get_s3_client()
