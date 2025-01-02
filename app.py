@@ -228,7 +228,6 @@ def download_video_api():
     Expected JSON payload:
     {
         "url": "video_url_to_download",
-        "api_key": "12345678"
     }
     """
     # Log the request
@@ -240,13 +239,13 @@ def download_video_api():
         app.logger.warning("Empty request body")
         return jsonify({"success": False, "error": "Invalid request"}), 400
 
-    # Validate API key
-    api_key = data.get("api_key")
-    if not api_key or api_key != os.environ.get("HARDCODED_API_KEY"):
-        app.logger.warning(
-            f"Invalid API key attempt from {get_remote_address()} with key: {api_key}"
-        )
-        return jsonify({"success": False, "error": "Invalid API key"}), 403
+    # # Validate API key
+    # api_key = data.get("api_key")
+    # if not api_key or api_key != os.environ.get("HARDCODED_API_KEY"):
+    #     app.logger.warning(
+    #         f"Invalid API key attempt from {get_remote_address()} with key: {api_key}"
+    #     )
+    #     return jsonify({"success": False, "error": "Invalid API key"}), 403
 
     # Extract URL
     url = data.get("url")
