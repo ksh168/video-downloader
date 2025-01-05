@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
 
     const videoUrl = document.getElementById("videoUrl").value;
-    const apiKey = document.getElementById("apiKey").value;
     const statusDiv = document.getElementById("status");
     const loader = document.getElementById("loader");
 
@@ -31,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       body: JSON.stringify({
         url: videoUrl,
-        api_key: apiKey,
         client_id: clientId
       }),
     })

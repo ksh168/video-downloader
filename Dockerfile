@@ -31,3 +31,6 @@ EXPOSE 3001
 
 # Run the application with Gunicorn using gevent worker
 CMD ["gunicorn", "--worker-class", "gevent", "-w", "1", "--bind", "0.0.0.0:3001", "app:app"]
+
+
+# gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:3001 app:app
