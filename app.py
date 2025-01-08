@@ -107,7 +107,7 @@ class VideoDownloader:
         :param options: Optional dictionary of yt-dlp download options
         :return: Dictionary containing download information
         """
-        # Default download options
+        # Default download options with headers and bypass configurations
         default_opts = {
             "format": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]",
             "outtmpl": os.path.join(self.output_dir, "%(title)s.%(ext)s"),
@@ -115,6 +115,46 @@ class VideoDownloader:
             "no_color": True,
             "progress_hooks": [self._progress_hook],
             "nooverwrites": True,
+            "http_headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Referer": "https://www.google.com/",
+            },
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android"],
+                    "player_skip": ["webpage"],
+                }
+            },
+            "force_generic_extractor": True,
+            "ignoreerrors": True,
+            "retries": 10,
+            "fragment_retries": 10,
+            "skip_unavailable_fragments": True,
+            "extract_flat": True,
+            # Add impersonation settings
+            "impersonate": {
+                "chrome": {
+                    "version": "120",
+                    "platform": "Win32",
+                    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "accept_language": "en-US,en;q=0.9",
+                    "sec_ch_ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                    "sec_ch_ua_mobile": "?0",
+                    "sec_ch_ua_platform": '"Windows"',
+                }
+            },
+            "cookies": {
+                "browser": "chrome",
+                "profile": "default",
+            },
+            "referer": url,  # Use the video URL as referer
+            "playlist_items": None,
+            "throttled_rate": "1M",  # Limit download speed to avoid detection
+            "sleep_interval": 5,  # Add delay between requests
+            "max_sleep_interval": 10,
+            "force_ipv4": False, 
         }
 
         # Update default options with user-provided options
@@ -133,7 +173,7 @@ class VideoDownloader:
                     "filename": ydl.prepare_filename(info_dict),
                     "url": url,
                     "extractor": info_dict.get("extractor"),
-                    "download_directory": self.output_dir,  # Add download directory to return info
+                    "download_directory": self.output_dir,
                 }
 
         except Exception as e:
