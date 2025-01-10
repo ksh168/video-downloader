@@ -1,3 +1,4 @@
+import traceback
 from dotenv import load_dotenv
 
 from utils.impersonate import random_impersonate_target
@@ -117,31 +118,31 @@ class VideoDownloader:
             "no_color": True,
             "progress_hooks": [self._progress_hook],
             "nooverwrites": True,
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Referer": "https://www.google.com/",
-            },
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android"],
-                    "player_skip": ["webpage"],
-                }
-            },
-            "force_generic_extractor": True,
-            "ignoreerrors": True,
-            "retries": 10,
-            "fragment_retries": 10,
-            "skip_unavailable_fragments": True,
-            "extract_flat": True,
+            # "http_headers": {
+            #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            #     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            #     "Accept-Language": "en-US,en;q=0.5",
+            #     "Referer": "https://www.google.com/",
+            # },
+            # "extractor_args": {
+            #     "youtube": {
+            #         "player_client": ["android"],
+            #         "player_skip": ["webpage"],
+            #     }
+            # },
+            # "force_generic_extractor": True,
+            # "ignoreerrors": True,
+            # "retries": 10,
+            # "fragment_retries": 10,
+            # "skip_unavailable_fragments": True,
+            # "extract_flat": True,
             "impersonate": random_impersonate_target(),
-            "referer": url,  # Use the video URL as referer
-            "playlist_items": None,
-            "throttled_rate": "1M",  # Limit download speed to avoid detection
-            "sleep_interval": 5,  # Add delay between requests
-            "max_sleep_interval": 10,
-            "force_ipv4": False, 
+            # "referer": url,  # Use the video URL as referer
+            # "playlist_items": None,
+            # "throttled_rate": "1M",  # Limit download speed to avoid detection
+            # "sleep_interval": 5,  # Add delay between requests
+            # "max_sleep_interval": 10,
+            # "force_ipv4": False, 
         }
 
         # Update default options with user-provided options
@@ -152,7 +153,7 @@ class VideoDownloader:
             with yt_dlp.YoutubeDL(default_opts) as ydl:
                 # Extract video information
                 info_dict = ydl.extract_info(url, download=True)
-
+                app.logger.info(f"Downloaded video info: {info_dict}")
                 # Prepare return information
                 return {
                     "success": True,
@@ -164,6 +165,8 @@ class VideoDownloader:
                 }
 
         except Exception as e:
+            app.logger.error(f"Error downloading video: {str(e)}")
+            app.logger.error(traceback.format_exc())
             return {"success": False, "error": str(e), "url": url}
 
     def _progress_hook(self, d: Dict[str, Any]) -> None:
