@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 
+from utils.impersonate import random_impersonate_target
+
 load_dotenv()
 
 import os
@@ -133,22 +135,7 @@ class VideoDownloader:
             "fragment_retries": 10,
             "skip_unavailable_fragments": True,
             "extract_flat": True,
-            # Add impersonation settings
-            "impersonate": {
-                "chrome": {
-                    "version": "120",
-                    "platform": "Win32",
-                    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "accept_language": "en-US,en;q=0.9",
-                    "sec_ch_ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                    "sec_ch_ua_mobile": "?0",
-                    "sec_ch_ua_platform": '"Windows"',
-                }
-            },
-            "cookies": {
-                "browser": "chrome",
-                "profile": "default",
-            },
+            "impersonate": random_impersonate_target(),
             "referer": url,  # Use the video URL as referer
             "playlist_items": None,
             "throttled_rate": "1M",  # Limit download speed to avoid detection
