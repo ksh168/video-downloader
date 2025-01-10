@@ -115,9 +115,10 @@ class VideoDownloader:
             "format": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]",
             "outtmpl": os.path.join(self.output_dir, "%(title)s.%(ext)s"),
             "merge_output_format": "mp4",
-            "no_color": True,
+            # "no_color": True,
+            "verbose": True,
             "progress_hooks": [self._progress_hook],
-            "nooverwrites": True,
+            # "nooverwrites": True,
             # "http_headers": {
             #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             #     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
