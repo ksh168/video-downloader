@@ -2,6 +2,7 @@ import traceback
 from dotenv import load_dotenv
 
 from utils.impersonate import random_impersonate_target
+from utils.url_sanitizer import sanitize_url
 
 load_dotenv()
 
@@ -26,6 +27,8 @@ from flask_socketio import SocketIO
 from utils.upload_to_s3 import upload_to_s3_and_get_url
 from flask_socketio import join_room
 from utils.cleanup_s3 import init_cleanup_scheduler
+
+# from prometheus_flask_exporter import PrometheusMetrics
 
 
 # Configure logging
@@ -143,7 +146,7 @@ class VideoDownloader:
             # "throttled_rate": "1M",  # Limit download speed to avoid detection
             # "sleep_interval": 5,  # Add delay between requests
             # "max_sleep_interval": 10,
-            # "force_ipv4": False, 
+            # "force_ipv4": False,
         }
 
         # Update default options with user-provided options
@@ -280,7 +283,7 @@ def download_video_api():
     #     return jsonify({"success": False, "error": "Invalid API key"}), 403
 
     # Extract URL
-    url = data.get("url")
+    url = sanitize_url(data.get("url"))
     if not url:
         app.logger.warning("Download request without URL")
         return jsonify({"success": False, "error": "No URL provided"}), 400
@@ -335,6 +338,11 @@ def handle_client_registration(data):
     if client_id:
         # Join a room specific to this client
         join_room(client_id)
+
+
+# def init_metrics(app):
+#     metrics = PrometheusMetrics(app)
+#     metrics.info('app_info', 'Application info', version='1.0.0')
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@ def upload_to_s3(file_path: str, object_name: str) -> Optional[str]:
 
         # Sanitize and create a unique object name
         sanitized_name = sanitize_object_name(object_name)
-        unique_object_name = f"{uuid4()}_{sanitized_name}"
+        unique_object_name = f"{uuid4()}/{sanitized_name}"
 
         # Upload the file
         s3_client.upload_file(file_path, S3_BUCKET_NAME, unique_object_name)
