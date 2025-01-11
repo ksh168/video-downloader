@@ -6,8 +6,6 @@ A Flask-based web service that allows users to download videos using yt-dlp with
 
 - Web interface for video downloads
 - Real-time download progress updates
-- API key authentication
-- Rate limiting
 - Automatic file cleanup
 - S3 storage integration
 - Docker support
@@ -25,7 +23,6 @@ A Flask-based web service that allows users to download videos using yt-dlp with
 Create a `.env` file with the following variables:
 
 ```
-HARDCODED_API_KEY=your_api_key
 AWS_ACCESS_KEY_ID=your_aws_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret
 ```

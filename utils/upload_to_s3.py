@@ -1,15 +1,14 @@
 from typing import Optional
 from botocore.exceptions import ClientError
 import re
+import os
 from uuid import uuid4
 
-from constants import (
-    S3_BUCKET_NAME,
-)
 from utils.delete_local_file import delete_local_file
 from utils.get_s3_client import get_s3_client
 
 s3_client = get_s3_client()
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 
 
 def get_s3_presigned_url(bucket_name: str, object_name: str) -> Optional[str]:
