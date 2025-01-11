@@ -2,7 +2,7 @@ from yt_dlp import ImpersonateTarget
 from random import choice
 
 impersonate_target_list = (
-    # ImpersonateTarget(client='chrome', version='110', os='windows', os_version='10'),
+    ImpersonateTarget(client='chrome', version='110', os='windows', os_version='10'),
     ImpersonateTarget(client='chrome', version='107', os='windows', os_version='10'),
     ImpersonateTarget(client='chrome', version='104', os='windows', os_version='10'),
     ImpersonateTarget(client='chrome', version='101', os='windows', os_version='10'),
