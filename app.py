@@ -1,4 +1,8 @@
+import traceback
 from dotenv import load_dotenv
+
+from utils.impersonate import random_impersonate_target
+from utils.url_sanitizer import sanitize_url
 
 load_dotenv()
 
@@ -23,6 +27,8 @@ from flask_socketio import SocketIO
 from utils.upload_to_s3 import upload_to_s3_and_get_url
 from flask_socketio import join_room
 from utils.cleanup_s3 import init_cleanup_scheduler
+
+# from prometheus_flask_exporter import PrometheusMetrics
 
 
 # Configure logging
@@ -107,14 +113,40 @@ class VideoDownloader:
         :param options: Optional dictionary of yt-dlp download options
         :return: Dictionary containing download information
         """
-        # Default download options
+        # Default download options with headers and bypass configurations
         default_opts = {
             "format": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]",
             "outtmpl": os.path.join(self.output_dir, "%(title)s.%(ext)s"),
             "merge_output_format": "mp4",
-            "no_color": True,
+            # "no_color": True,
+            "verbose": True,
             "progress_hooks": [self._progress_hook],
             "nooverwrites": True,
+            # "http_headers": {
+            #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            #     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            #     "Accept-Language": "en-US,en;q=0.5",
+            #     "Referer": "https://www.google.com/",
+            # },
+            # "extractor_args": {
+            #     "youtube": {
+            #         "player_client": ["android"],
+            #         "player_skip": ["webpage"],
+            #     }
+            # },
+            # "force_generic_extractor": True,
+            # "ignoreerrors": True,
+            # "retries": 10,
+            # "fragment_retries": 10,
+            # "skip_unavailable_fragments": True,
+            # "extract_flat": True,
+            "impersonate": random_impersonate_target(),
+            # "referer": url,  # Use the video URL as referer
+            # "playlist_items": None,
+            # "throttled_rate": "1M",  # Limit download speed to avoid detection
+            # "sleep_interval": 5,  # Add delay between requests
+            # "max_sleep_interval": 10,
+            # "force_ipv4": False,
         }
 
         # Update default options with user-provided options
@@ -125,7 +157,7 @@ class VideoDownloader:
             with yt_dlp.YoutubeDL(default_opts) as ydl:
                 # Extract video information
                 info_dict = ydl.extract_info(url, download=True)
-
+                app.logger.info(f"Downloaded video info: {info_dict}")
                 # Prepare return information
                 return {
                     "success": True,
@@ -133,10 +165,12 @@ class VideoDownloader:
                     "filename": ydl.prepare_filename(info_dict),
                     "url": url,
                     "extractor": info_dict.get("extractor"),
-                    "download_directory": self.output_dir,  # Add download directory to return info
+                    "download_directory": self.output_dir,
                 }
 
         except Exception as e:
+            app.logger.error(f"Error downloading video: {str(e)}")
+            app.logger.error(traceback.format_exc())
             return {"success": False, "error": str(e), "url": url}
 
     def _progress_hook(self, d: Dict[str, Any]) -> None:
@@ -249,7 +283,7 @@ def download_video_api():
     #     return jsonify({"success": False, "error": "Invalid API key"}), 403
 
     # Extract URL
-    url = data.get("url")
+    url = sanitize_url(data.get("url"))
     if not url:
         app.logger.warning("Download request without URL")
         return jsonify({"success": False, "error": "No URL provided"}), 400
@@ -304,6 +338,11 @@ def handle_client_registration(data):
     if client_id:
         # Join a room specific to this client
         join_room(client_id)
+
+
+# def init_metrics(app):
+#     metrics = PrometheusMetrics(app)
+#     metrics.info('app_info', 'Application info', version='1.0.0')
 
 
 if __name__ == "__main__":
