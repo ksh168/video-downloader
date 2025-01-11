@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socket.on('download_progress', (data) => {
     const statusDiv = document.getElementById('status');
-    statusDiv.textContent = `Download Progress: ${data.percent.toFixed(1)}%`;
+    statusDiv.textContent = `Download Progress: ${data.progress.toFixed(1)}%`;
   });
 
   const form = document.getElementById('downloadForm');
