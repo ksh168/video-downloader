@@ -116,9 +116,8 @@ class VideoDownloader:
         # Default download options with headers and bypass configurations
         default_opts = {
             "format": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]",
-            "outtmpl": os.path.join(self.output_dir, "%(title)s.%(ext)s"),
+            "outtmpl": os.path.join(self.output_dir, "%(title).50s.%(ext)s"),
             "merge_output_format": "mp4",
-            # "no_color": True,
             "verbose": True,
             "progress_hooks": [self._progress_hook],
             "nooverwrites": True,
@@ -147,6 +146,9 @@ class VideoDownloader:
             # "sleep_interval": 5,  # Add delay between requests
             # "max_sleep_interval": 10,
             # "force_ipv4": False,
+            # Add filename sanitization options
+            # "restrictfilenames": True,  # Convert filename to ASCII
+            # "windowsfilenames": True,   # Ensure Windows compatibility
         }
 
         # Update default options with user-provided options
