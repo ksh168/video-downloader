@@ -147,8 +147,8 @@ class VideoDownloader:
             # "max_sleep_interval": 10,
             # "force_ipv4": False,
             # Add filename sanitization options
-            # "restrictfilenames": True,  # Convert filename to ASCII
-            # "windowsfilenames": True,   # Ensure Windows compatibility
+            "restrictfilenames": True,  # Convert filename to ASCII
+            "windowsfilenames": True,   # Ensure Windows compatibility
         }
 
         # Update default options with user-provided options
