@@ -1,15 +1,11 @@
 from dotenv import load_dotenv
 from utils.logger import setup_logging
-from utils.queue_consumer import consume_messages
-# from utils.queue_producer import publish_message
-# from utils.url_sanitizer import sanitize_url
 
 load_dotenv()
 
 import os
 
-from flask import Flask, request, jsonify, render_template
-from flask_limiter.util import get_remote_address
+from flask import Flask, jsonify, render_template
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from utils.cleanup_s3 import init_cleanup_scheduler

@@ -1,169 +1,102 @@
-import pika, pika.exceptions
-import os, json
+import pika
+import os
+import json
 import threading
-from utils.download_and_upload import download_file_and_upload_to_s3
 import time
+from utils.download_and_upload import download_file_and_upload_to_s3
 
-# Get the CloudAMQP URL from environment variable
-CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL")
+def create_connection():
+    """Create a new connection with automatic connection recovery"""
+    params = pika.URLParameters(os.getenv("CLOUDAMQP_URL"))
+    # Set heartbeat interval to 580 seconds
+    params.heartbeat = int(os.getenv("HEARTBEAT_INTERVAL"))
+    # Enable automatic recovery
+    params.connection_attempts = 3
+    params.retry_delay = 5
 
-# Parse the AMQP URL
-params = pika.URLParameters(CLOUDAMQP_URL)
-connection = pika.BlockingConnection(params)
-channel = connection.channel()
+    connection = pika.BlockingConnection(params)
+    channel = connection.channel()
+    channel.queue_declare(queue=os.getenv("QUEUE_NAME"), durable=True)
+    return connection, channel
 
-QUEUE_NAME = os.getenv("QUEUE_NAME")
-channel.queue_declare(queue=QUEUE_NAME, durable=True)
-
-
-# def send_heartbeat(ch):
-#     while True:
-#         # Use a dummy delivery tag for heartbeat
-#         ch.basic_nack(delivery_tag=0)  # Send a heartbeat
-#         print(" [x] Sent heartbeat to RabbitMQ")
-#         time.sleep(30)  # Send every 30 seconds
-
-
-# Function to send heartbeats in a separate thread
-def send_heartbeat(connection):
-    while True:
-        try:
-            # Make sure the connection is still open
-            if connection.is_open:
-                connection.process_data_events()  # Send a heartbeat frame to RabbitMQ
-                print(" [x] Sent heartbeat to RabbitMQ")
-            else:
-                print("Connection is closed, exiting heartbeat thread.")
-                break
-            time.sleep(
-                int(os.getenv("HEARTBEAT_INTERVAL"))
-            )  # Sleep for the heartbeat interval
-        except Exception as e:
-            print(f"Error in heartbeat thread: {e}")
-            break
-
-
-def callback(ch, method, properties, body):
+def process_message(ch, method, properties, body):
     try:
         body_json = json.loads(body)
-        print(
-            f"Received message with message_id: {properties.message_id} with body_json: {body_json} from QUEUE_NAME: {QUEUE_NAME} with retry_count: {body_json.get('retry_count', 0)}"
-        )
-
-        # Check retry count
         retry_count = body_json.get("retry_count", 0)
-        if retry_count >= 5:
-            print(
-                f"Max retries reached for message {properties.message_id} in the queue {QUEUE_NAME}. Discarding message."
-            )
+        
+        print(f"Processing message {properties.message_id} with body {body_json},  (attempt {retry_count + 1}/5)")
+
+        # Check retry count BEFORE processing
+        if retry_count >= 4:  # Changed from 5 to 4 since we're counting from 0
+            print(f"Max retries reached for message {properties.message_id}. Discarding.")
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # Perform the long task
+        # Process the message
         download_task = download_file_and_upload_to_s3(body_json.get("url"))
 
         if not download_task.get("success"):
-            raise Exception(download_task.get("error"))
+            # Increment retry count and requeue
+            body_json["retry_count"] = retry_count + 1
+            ch.basic_publish(
+                exchange="",
+                routing_key=os.getenv("QUEUE_NAME"),
+                body=json.dumps(body_json),
+                properties=pika.BasicProperties(
+                    delivery_mode=pika.DeliveryMode.Persistent,
+                    message_id=properties.message_id
+                )
+            )
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            return
 
-        print(
-            f" [x] Done processing with message_id: {properties.message_id} for QUEUE_NAME: {QUEUE_NAME}"
-        )
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        print(f"Successfully processed message {properties.message_id}")
 
     except Exception as e:
-        print(f"Error processing message {properties.message_id}: {e}")
-
-        # Update retry count
-        body_json["retry_count"] = body_json.get("retry_count", 0) + 1
-
-        if body_json["retry_count"] < 5 and not body_json.get("is_success"):
-            # Requeue with updated retry count using the existing publish function
-            try:
-                channel.basic_publish(
-                    exchange="",
-                    routing_key=QUEUE_NAME,
-                    body=json.dumps(body_json),
-                    properties=pika.BasicProperties(
-                        message_id=properties.message_id,
-                        delivery_mode=pika.DeliveryMode.Persistent,
-                        timestamp=int(time.time()),
-                    ),
-                )
-
-                print(
-                    f" [x] Message with message_id: {properties.message_id} of QUEUE_NAME: {QUEUE_NAME} requeued (retry count: {body_json['retry_count']})"
-                )
-            except Exception as e:
-                print(
-                    f" [x] Failed to requeue message with message_id: {properties.message_id}"
-                )
-
-                raise Exception(e)
-        elif body_json.get("is_success"):
-            print(
-                f" [x] Message with message_id: {properties.message_id} of QUEUE_NAME: {QUEUE_NAME} is successful. Discarding message."
-            )
+        print(f"Error processing message: {str(e)}")
+        if retry_count < 4:  # Changed from 5 to 4
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         else:
-            print(
-                f" [x] Max retries reached for message with message_id: {properties.message_id}. Discarding message."
-            )
-
-        # Acknowledge the original message
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-
-
-def create_connection():
-    """Create a new connection and channel"""
-    params = pika.URLParameters(CLOUDAMQP_URL)
-    connection = pika.BlockingConnection(params)
-    channel = connection.channel()
-    channel.queue_declare(queue=QUEUE_NAME, durable=True)
-    return connection, channel
-
-
-def start_consumer():
-    while True:
-        try:
-            global connection, channel
-            connection, channel = create_connection()
-            
-            # Start heartbeat thread before consuming messages
-            heartbeat_thread = threading.Thread(
-                target=send_heartbeat, 
-                args=(connection,)
-            )
-            heartbeat_thread.daemon = True
-            heartbeat_thread.start()
-            
-            channel.basic_qos(prefetch_count=1)
-            channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
-
-            print(" [*] Waiting for messages. To exit press CTRL+C")
-            channel.start_consuming()
-            
-        except pika.exceptions.ConnectionClosed as e:
-            print(f"Connection closed: {e}. Reconnecting in 5 seconds...")
-            time.sleep(5)
-            continue
-        except pika.exceptions.ChannelClosed as e:
-            print(f"Channel closed: {e}. Reconnecting in 5 seconds...")
-            time.sleep(5)
-            continue
-        except Exception as e:
-            print(f"Error: {e} while consuming messages from {QUEUE_NAME}")
-            time.sleep(5)
-            continue
-        finally:
-            try:
-                if connection and connection.is_open:
-                    connection.close()
-            except Exception as e:
-                print(f"Error closing connection: {e}")
-                pass
-
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 def consume_messages():
-    # Create and start a daemon thread for the consumer
-    consumer_thread = threading.Thread(target=start_consumer)
-    consumer_thread.daemon = True
+    def start_consumer():
+        while True:
+            try:
+                connection, channel = create_connection()
+                
+                # Set QoS prefetch to 1 to ensure fair dispatch
+                channel.basic_qos(prefetch_count=1)
+                
+                print(f" [*] Connected to RabbitMQ, waiting for messages...")
+                
+                # Start consuming messages
+                channel.basic_consume(
+                    queue=os.getenv("QUEUE_NAME"),
+                    on_message_callback=process_message
+                )
+                
+                try:
+                    channel.start_consuming()
+                except KeyboardInterrupt:
+                    channel.stop_consuming()
+                    break
+                except Exception as e:
+                    print(f"Consumer error: {str(e)}")
+                    # Wait before reconnecting
+                    time.sleep(5)
+                finally:
+                    try:
+                        if connection and not connection.is_closed:
+                            connection.close()
+                    except Exception:
+                        pass
+
+            except Exception as e:
+                print(f"Connection error: {str(e)}")
+                time.sleep(5)  # Wait before reconnecting
+
+    # Start consumer in a separate thread
+    consumer_thread = threading.Thread(target=start_consumer, daemon=True)
     consumer_thread.start()
