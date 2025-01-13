@@ -68,8 +68,14 @@ def enqueue_video_download():
         app.logger.warning("Download request without URL")
         return jsonify({"success": False, "error": "No URL provided"}), 400
 
-    publish_message({"url": url, "ip_address": ip_address})
-
+    success = publish_message({"url": url, "ip_address": ip_address})
+    
+    if not success:
+        return jsonify({
+            "success": False, 
+            "error": "Temporarily unable to process request. Please try again later."
+        }), 503
+    
     return jsonify({"success": True, "message": "Video download request enqueued"}), 200
 
 
