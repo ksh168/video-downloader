@@ -12,7 +12,7 @@ curl_cffi==0.7.1
 Deprecated==1.2.15
 Flask==3.1.0
 Flask-Limiter==3.9.2
-Flask-SocketIO==5.4.1
+# Flask-SocketIO==5.4.1
 gevent==24.11.1
 # gevent-websocket==0.10.1
 greenlet==3.1.1
@@ -35,11 +35,11 @@ Pygments==2.18.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-engineio==4.11.0
-python-socketio==5.11.4
+# python-socketio==5.11.4
 requests==2.32.3
 rich==13.9.4
 s3transfer==0.10.4
-simple-websocket==1.1.0
+# simple-websocket==1.1.0
 six==1.17.0
 typing_extensions==4.12.2
 tzlocal==5.2

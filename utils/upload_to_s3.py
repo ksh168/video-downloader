@@ -54,7 +54,7 @@ def sanitize_object_name(object_name: str) -> str:
     return "vidf_"+ sanitized
 
 
-def upload_to_s3(file_path: str, object_name: str) -> Optional[str]:
+def upload_file_to_s3(file_path: str, object_name: str) -> Optional[str]:
     """
     Upload a file to S3 with a unique name.
 
@@ -90,11 +90,12 @@ def upload_to_s3_and_get_url(
     :param download_directory: Directory to download the file to
     :return: Presigned URL for the uploaded object
     """
-    uploaded_object_name = upload_to_s3(file_path, object_name)
+    uploaded_object_name = upload_file_to_s3(file_path, object_name)
     if uploaded_object_name:
-        presigned_url = get_s3_presigned_url(S3_BUCKET_NAME, uploaded_object_name)
+        # presigned_url = get_s3_presigned_url(S3_BUCKET_NAME, uploaded_object_name)
 
         delete_local_file(download_directory)
 
-        return presigned_url
+        # return presigned_url
+        return True
     return None
