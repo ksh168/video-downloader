@@ -15,12 +15,27 @@ QUEUE_NAME = os.getenv("QUEUE_NAME")
 channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
 
-def send_heartbeat(ch):
+# def send_heartbeat(ch):
+#     while True:
+#         # Use a dummy delivery tag for heartbeat
+#         ch.basic_nack(delivery_tag=0)  # Send a heartbeat
+#         print(" [x] Sent heartbeat to RabbitMQ")
+#         time.sleep(30)  # Send every 30 seconds
+
+# Function to send heartbeats in a separate thread
+def send_heartbeat(connection):
     while True:
-        # Use a dummy delivery tag for heartbeat
-        ch.basic_nack(delivery_tag=0)  # Send a heartbeat
-        print(" [x] Sent heartbeat to RabbitMQ")
-        time.sleep(30)  # Send every 30 seconds
+        try:
+            # Make sure the connection is still open
+            if connection.is_open:
+                connection.process_data_events()  # Send a heartbeat frame to RabbitMQ
+            else:
+                print("Connection is closed, exiting heartbeat thread.")
+                break
+            time.sleep(int(os.getenv("HEARTBEAT_INTERVAL")))  # Sleep for the heartbeat interval
+        except Exception as e:
+            print(f"Error in heartbeat thread: {e}")
+            break
 
 
 def callback(ch, method, properties, body):
@@ -40,7 +55,7 @@ def callback(ch, method, properties, body):
             return
 
         # Start heartbeat thread
-        heartbeat_thread = threading.Thread(target=send_heartbeat, args=(ch,))
+        heartbeat_thread = threading.Thread(target=send_heartbeat, args=(connection,))
         heartbeat_thread.daemon = True
         heartbeat_thread.start()
 
