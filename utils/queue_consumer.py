@@ -31,6 +31,7 @@ def send_heartbeat(connection):
             # Make sure the connection is still open
             if connection.is_open:
                 connection.process_data_events()  # Send a heartbeat frame to RabbitMQ
+                print(" [x] Sent heartbeat to RabbitMQ")
             else:
                 print("Connection is closed, exiting heartbeat thread.")
                 break
