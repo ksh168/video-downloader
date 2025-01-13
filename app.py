@@ -224,7 +224,8 @@ limiter = Limiter(
 setup_logging(app)
 
 # Initialize the cleanup scheduler
-init_cleanup_scheduler()
+if os.environ.get("ENABLE_S3_CLEANUP", "False").lower() == "true":
+    init_cleanup_scheduler()
 
 
 # Add this route before the download API route
