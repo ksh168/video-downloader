@@ -58,11 +58,6 @@ def callback(ch, method, properties, body):
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # Start heartbeat thread
-        heartbeat_thread = threading.Thread(target=send_heartbeat, args=(connection,))
-        heartbeat_thread.daemon = True
-        heartbeat_thread.start()
-
         # Perform the long task
         download_task = download_file_and_upload_to_s3(body_json.get("url"))
 
@@ -130,6 +125,14 @@ def start_consumer():
         try:
             global connection, channel
             connection, channel = create_connection()
+            
+            # Start heartbeat thread before consuming messages
+            heartbeat_thread = threading.Thread(
+                target=send_heartbeat, 
+                args=(connection,)
+            )
+            heartbeat_thread.daemon = True
+            heartbeat_thread.start()
             
             channel.basic_qos(prefetch_count=1)
             channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
