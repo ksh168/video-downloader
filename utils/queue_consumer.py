@@ -1,4 +1,5 @@
-import pika, os, json
+import pika, pika.exceptions
+import os, json
 import threading
 from utils.download_and_upload import download_file_and_upload_to_s3
 import time
@@ -22,6 +23,7 @@ channel.queue_declare(queue=QUEUE_NAME, durable=True)
 #         print(" [x] Sent heartbeat to RabbitMQ")
 #         time.sleep(30)  # Send every 30 seconds
 
+
 # Function to send heartbeats in a separate thread
 def send_heartbeat(connection):
     while True:
@@ -32,7 +34,9 @@ def send_heartbeat(connection):
             else:
                 print("Connection is closed, exiting heartbeat thread.")
                 break
-            time.sleep(int(os.getenv("HEARTBEAT_INTERVAL")))  # Sleep for the heartbeat interval
+            time.sleep(
+                int(os.getenv("HEARTBEAT_INTERVAL"))
+            )  # Sleep for the heartbeat interval
         except Exception as e:
             print(f"Error in heartbeat thread: {e}")
             break
@@ -97,6 +101,8 @@ def callback(ch, method, properties, body):
                 print(
                     f" [x] Failed to requeue message with message_id: {properties.message_id}"
                 )
+
+                raise Exception(e)
         elif body_json.get("is_success"):
             print(
                 f" [x] Message with message_id: {properties.message_id} of QUEUE_NAME: {QUEUE_NAME} is successful. Discarding message."
@@ -110,21 +116,50 @@ def callback(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def start_consumer():
-    try:
-        channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
+def create_connection():
+    """Create a new connection and channel"""
+    params = pika.URLParameters(CLOUDAMQP_URL)
+    connection = pika.BlockingConnection(params)
+    channel = connection.channel()
+    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    return connection, channel
 
-        print(" [*] Waiting for messages. To exit press CTRL+C")
-        channel.start_consuming()
-    except Exception as e:
-        print(f"Error: {e} while consuming messages from {QUEUE_NAME}")
+
+def start_consumer():
+    while True:
+        try:
+            global connection, channel
+            connection, channel = create_connection()
+            
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
+
+            print(" [*] Waiting for messages. To exit press CTRL+C")
+            channel.start_consuming()
+            
+        except pika.exceptions.ConnectionClosed as e:
+            print(f"Connection closed: {e}. Reconnecting in 5 seconds...")
+            time.sleep(5)
+            continue
+        except pika.exceptions.ChannelClosed as e:
+            print(f"Channel closed: {e}. Reconnecting in 5 seconds...")
+            time.sleep(5)
+            continue
+        except Exception as e:
+            print(f"Error: {e} while consuming messages from {QUEUE_NAME}")
+            time.sleep(5)
+            continue
+        finally:
+            try:
+                if connection and connection.is_open:
+                    connection.close()
+            except Exception as e:
+                print(f"Error closing connection: {e}")
+                pass
 
 
 def consume_messages():
     # Create and start a daemon thread for the consumer
     consumer_thread = threading.Thread(target=start_consumer)
-    consumer_thread.daemon = (
-        True  # This ensures the thread will exit when the main program exits
-    )
+    consumer_thread.daemon = True
     consumer_thread.start()
