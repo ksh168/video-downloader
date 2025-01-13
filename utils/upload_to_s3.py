@@ -40,7 +40,7 @@ def sanitize_object_name(object_name: str) -> str:
     :return: Sanitized object name
     """
     # First remove unsafe characters
-    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "", object_name)
+    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", object_name)
 
     # If filename is longer than 50 chars, truncate it
     # We preserve the file extension by splitting and handling separately
@@ -51,7 +51,7 @@ def sanitize_object_name(object_name: str) -> str:
         max_name_length = 50 - len(ext)
         sanitized = name[:max_name_length] + ext
     
-    return "vidf"+ sanitized
+    return "vidf_"+ sanitized
 
 
 def upload_to_s3(file_path: str, object_name: str) -> Optional[str]:
@@ -67,7 +67,7 @@ def upload_to_s3(file_path: str, object_name: str) -> Optional[str]:
 
         # Sanitize and create a unique object name
         sanitized_name = sanitize_object_name(object_name)
-        unique_object_name = f"{uuid4()}/{sanitized_name}"
+        unique_object_name = f"{uuid4()}_{sanitized_name}"
 
         # Upload the file
         s3_client.upload_file(file_path, S3_BUCKET_NAME, unique_object_name)
