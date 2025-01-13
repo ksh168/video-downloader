@@ -62,7 +62,8 @@ def download_file_and_upload_to_s3(url, client_id=None):
             print(f"Download successful, uploading to S3: {filename}")
             # Use hash as prefix for the file name
             # Sanitize and create a unique object name
-            sanitized_name = sanitize_object_name(download_req.get("title", ""))
+            extension = os.path.splitext(filename)[1]
+            sanitized_name = sanitize_object_name(download_req.get("title", "") + extension)
             unique_object_name = f"{url_hash}_{sanitized_name}"
 
             upload_result = upload_to_s3_and_get_url(
