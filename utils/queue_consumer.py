@@ -17,7 +17,8 @@ channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
 def send_heartbeat(ch):
     while True:
-        ch.basic_ack(delivery_tag=None)  # Send a heartbeat
+        # Use a dummy delivery tag for heartbeat
+        ch.basic_nack(delivery_tag=0)  # Send a heartbeat
         print(" [x] Sent heartbeat to RabbitMQ")
         time.sleep(30)  # Send every 30 seconds
 
