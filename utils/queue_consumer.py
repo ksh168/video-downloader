@@ -14,23 +14,24 @@ channel = connection.channel()
 QUEUE_NAME = os.getenv("QUEUE_NAME")
 channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
+
 def callback(ch, method, properties, body):
     try:
         body_json = json.loads(body)
         print(
-            f"Received message with message_id: {properties.message_id} with body_json: {body_json} from QUEUE_NAME: {QUEUE_NAME}"
+            f"Received message with message_id: {properties.message_id} with body_json: {body_json} from QUEUE_NAME: {QUEUE_NAME} with retry_count: {body_json.get('retry_count', 0)}"
         )
 
         # Check retry count
-        retry_count = body_json.get('retry_count', 0)
+        retry_count = body_json.get("retry_count", 0)
         if retry_count >= 5:
-            print(f"Max retries reached for message {properties.message_id} in the queue {QUEUE_NAME}. Discarding message.")
+            print(
+                f"Max retries reached for message {properties.message_id} in the queue {QUEUE_NAME}. Discarding message."
+            )
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        download_task = download_file_and_upload_to_s3(
-            body_json.get("url")
-        )
+        download_task = download_file_and_upload_to_s3(body_json.get("url"))
 
         if not download_task.get("success"):
             raise Exception(download_task.get("error"))
@@ -42,11 +43,11 @@ def callback(ch, method, properties, body):
 
     except Exception as e:
         print(f"Error processing message {properties.message_id}: {e}")
-        
+
         # Update retry count
-        body_json['retry_count'] = body_json.get('retry_count', 0) + 1
-        
-        if body_json['retry_count'] < 5:
+        body_json["retry_count"] = body_json.get("retry_count", 0) + 1
+
+        if body_json["retry_count"] < 5:
             # Requeue with updated retry count using the existing publish function
             success = publish_message(body_json)
             if success:
@@ -61,9 +62,10 @@ def callback(ch, method, properties, body):
             print(
                 f" [x] Max retries reached for message with message_id: {properties.message_id}. Discarding message."
             )
-        
+
         # Acknowledge the original message
         ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 def start_consumer():
     try:
@@ -74,6 +76,7 @@ def start_consumer():
         channel.start_consuming()
     except Exception as e:
         print(f"Error: {e} while consuming messages from {QUEUE_NAME}")
+
 
 def consume_messages():
     # Create and start a daemon thread for the consumer
