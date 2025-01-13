@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     statusDiv.className = ""; // Reset class
     loader.style.display = "block"; // Show loader
 
-    fetch("/enqueue_download", {
+    // fetch("/enqueue_download", {
+    fetch("#", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

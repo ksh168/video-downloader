@@ -1,7 +1,7 @@
 import pika, os, json
 import threading
 from utils.download_and_upload import download_file_and_upload_to_s3
-from utils.queue_producer import publish_message
+import time
 
 # Get the CloudAMQP URL from environment variable
 CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL")
@@ -13,6 +13,13 @@ channel = connection.channel()
 
 QUEUE_NAME = os.getenv("QUEUE_NAME")
 channel.queue_declare(queue=QUEUE_NAME, durable=True)
+
+
+def send_heartbeat(ch):
+    while True:
+        ch.basic_ack(delivery_tag=None)  # Send a heartbeat
+        print(" [x] Sent heartbeat to RabbitMQ")
+        time.sleep(30)  # Send every 30 seconds
 
 
 def callback(ch, method, properties, body):
@@ -31,6 +38,12 @@ def callback(ch, method, properties, body):
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
+        # Start heartbeat thread
+        heartbeat_thread = threading.Thread(target=send_heartbeat, args=(ch,))
+        heartbeat_thread.daemon = True
+        heartbeat_thread.start()
+
+        # Perform the long task
         download_task = download_file_and_upload_to_s3(body_json.get("url"))
 
         if not download_task.get("success"):
@@ -47,17 +60,31 @@ def callback(ch, method, properties, body):
         # Update retry count
         body_json["retry_count"] = body_json.get("retry_count", 0) + 1
 
-        if body_json["retry_count"] < 5:
+        if body_json["retry_count"] < 5 and not body_json.get("is_success"):
             # Requeue with updated retry count using the existing publish function
-            success = publish_message(body_json)
-            if success:
+            try:
+                channel.basic_publish(
+                    exchange="",
+                    routing_key=QUEUE_NAME,
+                    body=json.dumps(body_json),
+                    properties=pika.BasicProperties(
+                        message_id=properties.message_id,
+                        delivery_mode=pika.DeliveryMode.Persistent,
+                        timestamp=int(time.time()),
+                    ),
+                )
+
                 print(
                     f" [x] Message with message_id: {properties.message_id} of QUEUE_NAME: {QUEUE_NAME} requeued (retry count: {body_json['retry_count']})"
                 )
-            else:
+            except Exception as e:
                 print(
                     f" [x] Failed to requeue message with message_id: {properties.message_id}"
                 )
+        elif body_json.get("is_success"):
+            print(
+                f" [x] Message with message_id: {properties.message_id} of QUEUE_NAME: {QUEUE_NAME} is successful. Discarding message."
+            )
         else:
             print(
                 f" [x] Max retries reached for message with message_id: {properties.message_id}. Discarding message."
@@ -81,5 +108,7 @@ def start_consumer():
 def consume_messages():
     # Create and start a daemon thread for the consumer
     consumer_thread = threading.Thread(target=start_consumer)
-    consumer_thread.daemon = True  # This ensures the thread will exit when the main program exits
+    consumer_thread.daemon = (
+        True  # This ensures the thread will exit when the main program exits
+    )
     consumer_thread.start()

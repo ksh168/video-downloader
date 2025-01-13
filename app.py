@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 from utils.logger import setup_logging
 from utils.queue_consumer import consume_messages
-from utils.queue_producer import publish_message
-from utils.url_sanitizer import sanitize_url
+# from utils.queue_producer import publish_message
+# from utils.url_sanitizer import sanitize_url
 
 load_dotenv()
 
@@ -41,42 +41,42 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/enqueue_download", methods=["POST"])
-def enqueue_video_download():
-    """
-    API endpoint to download a video and return the file.
+# @app.route("/enqueue_download", methods=["POST"])
+# def enqueue_video_download():
+#     """
+#     API endpoint to download a video and return the file.
 
-    Expected JSON payload:
-    {
-        "url": "video_url_to_download",
-        "client_id": "unique_client_id"
-    }
-    """
-    ip_address = get_remote_address()
-    # Log the request
-    app.logger.info(f"Download request received from {ip_address}")
+#     Expected JSON payload:
+#     {
+#         "url": "video_url_to_download",
+#         "client_id": "unique_client_id"
+#     }
+#     """
+#     ip_address = get_remote_address()
+#     # Log the request
+#     app.logger.info(f"Download request received from {ip_address}")
 
-    # Get request data
-    data = request.get_json()
-    if not data:
-        app.logger.warning("Empty request body")
-        return jsonify({"success": False, "error": "Invalid request"}), 400
+#     # Get request data
+#     data = request.get_json()
+#     if not data:
+#         app.logger.warning("Empty request body")
+#         return jsonify({"success": False, "error": "Invalid request"}), 400
 
-    # Extract URL
-    url = sanitize_url(data.get("url"))
-    if not url:
-        app.logger.warning("Download request without URL")
-        return jsonify({"success": False, "error": "No URL provided"}), 400
+#     # Extract URL
+#     url = sanitize_url(data.get("url"))
+#     if not url:
+#         app.logger.warning("Download request without URL")
+#         return jsonify({"success": False, "error": "No URL provided"}), 400
 
-    success = publish_message({"url": url, "ip_address": ip_address})
+#     success = publish_message({"url": url, "ip_address": ip_address})
     
-    if not success:
-        return jsonify({
-            "success": False, 
-            "error": "Temporarily unable to process request. Please try again later."
-        }), 503
+#     if not success:
+#         return jsonify({
+#             "success": False, 
+#             "error": "Temporarily unable to process request. Please try again later."
+#         }), 503
     
-    return jsonify({"success": True, "message": "Video download request enqueued"}), 200
+#     return jsonify({"success": True, "message": "Video download request enqueued"}), 200
 
 
 @app.errorhandler(500)
