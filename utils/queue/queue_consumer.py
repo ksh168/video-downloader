@@ -3,7 +3,7 @@ import os
 import json
 import threading
 import time
-from utils.download_and_upload import download_file_and_upload_to_s3
+from utils.s3.download_and_upload import download_file_and_upload_to_s3
 
 def create_connection():
     """Create a new connection with automatic connection recovery"""

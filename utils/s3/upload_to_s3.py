@@ -4,8 +4,8 @@ import re
 import os
 from uuid import uuid4
 
-from utils.delete_local_file import delete_local_file
-from utils.get_s3_client import get_s3_client
+from utils.file_handling.delete_local_file import delete_local_file
+from utils.s3.get_s3_client import get_s3_client
 
 s3_client = get_s3_client()
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")

@@ -1,8 +1,8 @@
-from utils.sanitize_object_name import sanitize_object_name
+from utils.file_handling.sanitize_object_name import sanitize_object_name
 from utils.video_downloader import download_video_task
-from utils.upload_to_s3 import upload_to_s3_and_get_url
-from utils.hash_generator import generate_url_hash
-from utils.get_s3_client import get_s3_client
+from utils.s3.upload_to_s3 import upload_to_s3_and_get_url
+from utils.file_handling.hash_generator import generate_url_hash
+from utils.s3.get_s3_client import get_s3_client
 import os
 
 s3_client = get_s3_client()

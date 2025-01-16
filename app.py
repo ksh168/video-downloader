@@ -8,7 +8,7 @@ import os
 from flask import Flask, jsonify, render_template
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from utils.cleanup_s3 import init_cleanup_scheduler
+from utils.s3.cleanup_s3 import init_cleanup_scheduler
 
 
 app = Flask(__name__, template_folder=os.path.join(os.getcwd(), "templates"))
@@ -24,7 +24,7 @@ if os.environ.get("ENABLE_S3_CLEANUP", "False").lower() == "true":
     init_cleanup_scheduler()
 
 if os.environ.get("ENABLE_QUEUE_CONSUMER", "False").lower() == "true":
-    from utils.queue_consumer import consume_messages
+    from utils.queue.queue_consumer import consume_messages
     consume_messages()  # This will now run in a separate thread
 
 
