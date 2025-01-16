@@ -3,12 +3,6 @@ from utils.logger import setup_logging
 
 load_dotenv()
 
-# Print all environment variables
-print("\nEnvironment Variables present:")
-for key, value in os.environ.items():
-    print(f"{key}: {value}")
-
-
 import os
 
 from flask import Flask, jsonify, render_template
@@ -24,6 +18,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 # Set up logging
 setup_logging(app)
+
+# Print all environment variables
+print("\nEnvironment Variables present:")
+for key, value in os.environ.items():
+    print(f"{key}: {value}")
 
 # Initialize the cleanup scheduler
 if os.environ.get("ENABLE_S3_CLEANUP", "False").lower() == "true":
