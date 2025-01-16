@@ -3,6 +3,12 @@ from utils.logger import setup_logging
 
 load_dotenv()
 
+# Print all environment variables
+print("\nEnvironment Variables present:")
+for key, value in os.environ.items():
+    print(f"{key}: {value}")
+
+
 import os
 
 from flask import Flask, jsonify, render_template
