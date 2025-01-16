@@ -69,12 +69,15 @@ def consume_messages():
                 # Set QoS prefetch to 1 to ensure fair dispatch
                 channel.basic_qos(prefetch_count=1)
                 
-                print(f" [*] Connected to RabbitMQ, waiting for messages...")
+                # Generate a unique consumer tag
+                consumer_tag = f"consumer_{os.getenv('RENDER_SERVICE_NAME', 'default')}_{os.getpid()}"
+                print(f" [*] Connected to RabbitMQ, waiting for messages as {consumer_tag}...")
                 
-                # Start consuming messages
+                # Start consuming messages with the unique consumer tag
                 channel.basic_consume(
                     queue=os.getenv("QUEUE_NAME"),
-                    on_message_callback=process_message
+                    on_message_callback=process_message,
+                    consumer_tag=consumer_tag
                 )
                 
                 try:
