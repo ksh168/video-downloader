@@ -8,8 +8,13 @@ from typing import Dict, Optional, Any
 from utils.impersonate import random_impersonate_target
 from flask import current_app
 
+from utils.redis.redis_connection import RedisClient
+
 
 class VideoDownloader:
+    """
+    Class for downloading videos from a given URL.
+    """
     def __init__(self, output_dir: Optional[str] = None):
         """
         Initialize the VideoDownloader with a custom or default output directory.
@@ -85,6 +90,16 @@ class VideoDownloader:
             bytes /= 1024.0
         return f"{bytes:.2f}YiB"
 
+    def check_and_increment_retry_count(self, url: str) -> Dict[str, Any]:
+        """Check and increment the retry count for a given URL"""
+        self.redis_client = RedisClient()
+        retry_count = self.redis_client.get_retry_count(url)
+        if retry_count >= int(os.getenv("MAX_URL_RETRIES")):
+            return {"allowed": False, "error": "Max retry attempts exceeded"}
+        else:
+            self.redis_client.increment_retry_count(url)
+            return {"allowed": True, "retry_count": retry_count}
+
     def download(
         self, url: str, options: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -133,20 +148,20 @@ class VideoDownloader:
             return {"success": False, "error": str(e), "url": url}
 
 
-def download_video(url, client_id=None):
-    """
-    Convenience function for quick video downloads.
+# def download_video(url, client_id=None):
+#     """
+#     Convenience function for quick video downloads.
 
-    :param url: URL of the video to download
-    :param output_dir: Optional directory to save the video
-    :return: Download result dictionary
-    """
-    try:
-        downloader = VideoDownloader()
-        result = downloader.download(url)
-        return result
-    except Exception as e:
-        return {"success": False, "error": str(e), "filename": None}
+#     :param url: URL of the video to download
+#     :param output_dir: Optional directory to save the video
+#     :return: Download result dictionary
+#     """
+#     try:
+#         downloader = VideoDownloader()
+#         result = downloader.download(url)
+#         return result
+#     except Exception as e:
+#         return {"success": False, "error": str(e), "filename": None}
 
 
 def get_logger():
@@ -169,6 +184,12 @@ def download_video_task(url, client_id = None):
     logger = get_logger()
     try:
         downloader = VideoDownloader()
+
+        retry_count = downloader.check_and_increment_retry_count(url)
+        if not retry_count["allowed"]:
+            logger.error(retry_count["error"])
+            return None
+        
         result = downloader.download(url)
 
         # Check if download was successful

@@ -22,43 +22,22 @@ def create_connection():
 def process_message(ch, method, properties, body):
     try:
         body_json = json.loads(body)
-        retry_count = body_json.get("retry_count", 0)
+        url = body_json.get("url")
         
-        print(f"Processing message {properties.message_id} with body {body_json},  (attempt {retry_count + 1}/5)")
-
-        # Check retry count BEFORE processing
-        if retry_count >= 4:  # Changed from 5 to 4 since we're counting from 0
-            print(f"Max retries reached for message {properties.message_id}. Discarding.")
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            return
+        print(f"Processing message {properties.message_id} with URL {url}")
 
         # Process the message
-        download_task = download_file_and_upload_to_s3(body_json.get("url"))
+        download_task = download_file_and_upload_to_s3(url)
 
-        if not download_task.get("success"):
-            # Increment retry count and requeue
-            body_json["retry_count"] = retry_count + 1
-            ch.basic_publish(
-                exchange="",
-                routing_key=os.getenv("QUEUE_NAME"),
-                body=json.dumps(body_json),
-                properties=pika.BasicProperties(
-                    delivery_mode=pika.DeliveryMode.Persistent,
-                    message_id=properties.message_id
-                )
-            )
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-            return
-
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        print(f"Successfully processed message {properties.message_id}")
+        if download_task.get("success"):
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+        else:
+            # If download failed, reject the message and requeue
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
     except Exception as e:
         print(f"Error processing message: {str(e)}")
-        if retry_count < 4:  # Changed from 5 to 4
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-        else:
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def consume_messages():
     def start_consumer():
@@ -87,7 +66,6 @@ def consume_messages():
                     break
                 except Exception as e:
                     print(f"Consumer error: {str(e)}")
-                    # Wait before reconnecting
                     time.sleep(5)
                 finally:
                     try:
