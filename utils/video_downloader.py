@@ -15,6 +15,7 @@ class VideoDownloader:
     """
     Class for downloading videos from a given URL.
     """
+
     def __init__(self, output_dir: Optional[str] = None):
         """
         Initialize the VideoDownloader with a custom or default output directory.
@@ -66,13 +67,13 @@ class VideoDownloader:
             print("Please install it and try again.\n")
 
     def _progress_hook(self, d):
-        if d['status'] == 'downloading':
-            progress = d.get('_percent_str', '0%').strip()
-            speed = d.get('_speed_str', '0KiB/s').strip()
-            eta = d.get('_eta_str', 'N/A')
-            total_bytes = d.get('total_bytes_estimate', d.get('total_bytes', 0))
-            downloaded = d.get('downloaded_bytes', 0)
-            
+        if d["status"] == "downloading":
+            progress = d.get("_percent_str", "0%").strip()
+            speed = d.get("_speed_str", "0KiB/s").strip()
+            eta = d.get("_eta_str", "N/A")
+            total_bytes = d.get("total_bytes_estimate", d.get("total_bytes", 0))
+            downloaded = d.get("downloaded_bytes", 0)
+
             # Format the progress message
             progress_msg = (
                 f"\n[download] {progress} of {self._format_bytes(total_bytes)} "
@@ -84,9 +85,9 @@ class VideoDownloader:
         """Convert bytes to human readable string"""
         if bytes is None:
             return "N/A"
-        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
             if abs(bytes) < 1024.0:
-                return f"{bytes:3.2f}B" if unit == '' else f"{bytes:3.2f}{unit}B"
+                return f"{bytes:3.2f}B" if unit == "" else f"{bytes:3.2f}{unit}B"
             bytes /= 1024.0
         return f"{bytes:.2f}YiB"
 
@@ -169,18 +170,21 @@ def get_logger():
         return current_app.logger
     except RuntimeError:
         import logging
-        logger = logging.getLogger('video_downloader')
+
+        logger = logging.getLogger("video_downloader")
         if not logger.handlers:
             handler = logging.StreamHandler()
-            handler.setFormatter(logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            ))
+            handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+            )
             logger.addHandler(handler)
             logger.setLevel(logging.INFO)
         return logger
 
 
-def download_video_task(url, client_id = None):
+def download_video_task(url, client_id=None):
     logger = get_logger()
     try:
         downloader = VideoDownloader()
@@ -188,8 +192,8 @@ def download_video_task(url, client_id = None):
         retry_count = downloader.check_and_increment_retry_count(url)
         if not retry_count["allowed"]:
             logger.error(retry_count["error"])
-            return {"success": False, "error": retry_count["error"]}
-        
+            return {"success": False, "error": retry_count["error"], "allowed": False}
+
         result = downloader.download(url)
 
         # Check if download was successful

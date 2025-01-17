@@ -5,6 +5,7 @@ import threading
 import time
 from utils.s3.download_and_upload import download_file_and_upload_to_s3
 
+
 def create_connection():
     """Create a new connection with automatic connection recovery"""
     params = pika.URLParameters(os.getenv("CLOUDAMQP_URL"))
@@ -19,11 +20,12 @@ def create_connection():
     channel.queue_declare(queue=os.getenv("QUEUE_NAME"), durable=True)
     return connection, channel
 
+
 def process_message(ch, method, properties, body):
     try:
         body_json = json.loads(body)
         url = body_json.get("url")
-        
+
         print(f"Processing message {properties.message_id} with URL {url}")
 
         # Process the message
@@ -31,6 +33,9 @@ def process_message(ch, method, properties, body):
 
         if download_task.get("success"):
             ch.basic_ack(delivery_tag=method.delivery_tag)
+        elif "allowed" in download_task and not download_task.get("allowed")
+            print(f"Download not allowed for URL: {url}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         else:
             # If download failed, reject the message and requeue
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
@@ -39,26 +44,29 @@ def process_message(ch, method, properties, body):
         print(f"Error processing message: {str(e)}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
+
 def consume_messages():
     def start_consumer():
         while True:
             try:
                 connection, channel = create_connection()
-                
+
                 # Set QoS prefetch to 1 to ensure fair dispatch
                 channel.basic_qos(prefetch_count=1)
-                
+
                 # Generate a unique consumer tag
                 consumer_tag = f"consumer_{os.getenv('RENDER_SERVICE_NAME', 'default')}_{os.getpid()}"
-                print(f" [*] Connected to RabbitMQ, waiting for messages as {consumer_tag}...")
-                
+                print(
+                    f" [*] Connected to RabbitMQ, waiting for messages as {consumer_tag}..."
+                )
+
                 # Start consuming messages with the unique consumer tag
                 channel.basic_consume(
                     queue=os.getenv("QUEUE_NAME"),
                     on_message_callback=process_message,
-                    consumer_tag=consumer_tag
+                    consumer_tag=consumer_tag,
                 )
-                
+
                 try:
                     channel.start_consuming()
                 except KeyboardInterrupt:

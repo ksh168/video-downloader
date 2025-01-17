@@ -12,7 +12,7 @@ S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 def check_file_exists_in_s3(hash_key: str) -> bool:
     """
     Check if a file exists in S3 using the hash key and has minimum size of 1MB
-    
+
     :param hash_key: The hash key to check
     :return: True if file exists and is >= 1MB, False otherwise
     """
@@ -48,8 +48,15 @@ def download_file_and_upload_to_s3(url, client_id=None):
         # Download the file if it doesn't exist
         download_req = download_video_task(url, client_id)
 
+        if (
+            download_req
+            and "allowed" in download_req
+            and not download_req.get("allowed")
+        ):
+            print(f"Download not allowed for URL: {url}")
+            return download_req
         # Check if download was successful
-        if not download_req or not download_req.get("success"):
+        elif not download_req or not download_req.get("success"):
             print(f"Download failed for URL: {url}")
             return {
                 "success": False,
@@ -63,7 +70,9 @@ def download_file_and_upload_to_s3(url, client_id=None):
             # Use hash as prefix for the file name
             # Sanitize and create a unique object name
             extension = os.path.splitext(filename)[1]
-            sanitized_name = sanitize_object_name(download_req.get("title", "") + extension)
+            sanitized_name = sanitize_object_name(
+                download_req.get("title", "") + extension
+            )
             unique_object_name = f"{url_hash}_{sanitized_name}"
 
             upload_result = upload_to_s3_and_get_url(
