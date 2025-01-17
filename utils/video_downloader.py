@@ -188,7 +188,7 @@ def download_video_task(url, client_id = None):
         retry_count = downloader.check_and_increment_retry_count(url)
         if not retry_count["allowed"]:
             logger.error(retry_count["error"])
-            return None
+            return {"success": False, "error": retry_count["error"]}
         
         result = downloader.download(url)
 

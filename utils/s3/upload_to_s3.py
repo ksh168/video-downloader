@@ -72,4 +72,4 @@ def upload_to_s3_and_get_url(
 
         # return presigned_url
         return True
-    return None
+    return False

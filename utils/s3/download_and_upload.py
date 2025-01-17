@@ -49,7 +49,7 @@ def download_file_and_upload_to_s3(url, client_id=None):
         download_req = download_video_task(url, client_id)
 
         # Check if download was successful
-        if not download_req.get("success"):
+        if not download_req or not download_req.get("success"):
             print(f"Download failed for URL: {url}")
             return {
                 "success": False,
