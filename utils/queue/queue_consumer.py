@@ -33,7 +33,7 @@ def process_message(ch, method, properties, body):
 
         if download_task.get("success"):
             ch.basic_ack(delivery_tag=method.delivery_tag)
-        elif "allowed" in download_task and not download_task.get("allowed")
+        elif "allowed" in download_task and not download_task.get("allowed"):
             print(f"Download not allowed for URL: {url}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         else:
