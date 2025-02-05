@@ -5,10 +5,12 @@ import subprocess
 import traceback
 import yt_dlp
 from typing import Dict, Optional, Any
-from utils.impersonate import random_impersonate_target
+from utils.random_impersonate import random_impersonate_target
 from flask import current_app
 
 from utils.redis.redis_connection import RedisClient
+from strategies.direct_hit_strategy import DirectHitDownloadStrategy
+from strategies.impersonate_strategy import ImpersonateDownloadStrategy
 
 
 class VideoDownloader:
@@ -101,17 +103,16 @@ class VideoDownloader:
             self.redis_client.increment_retry_count(url)
             return {"allowed": True, "retry_count": retry_count}
 
-    def download(
-        self, url: str, options: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def download(self, url: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Download a video from the given URL.
+        Download a video from the given URL by first attempting a direct hit
+        and then falling back to impersonation if needed.
 
-        :param url: URL of the video to download
-        :param options: Optional dictionary of yt-dlp download options
-        :return: Dictionary containing download information
+        :param url: URL of the video to download.
+        :param options: Optional dictionary of yt-dlp download options.
+        :return: Dictionary containing download information.
         """
-        # Default download options with headers and bypass configurations
+        # Default download options WITHOUT impersonation
         default_opts = {
             "format": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]",
             "outtmpl": os.path.join(self.output_dir, "%(title).50s.%(ext)s"),
@@ -119,50 +120,47 @@ class VideoDownloader:
             "verbose": True,
             "progress_hooks": [self._progress_hook],
             "nooverwrites": True,
-            "impersonate": random_impersonate_target(),
-            # "restrictfilenames": True,  # Convert filename to ASCII
             "windowsfilenames": True,  # Ensure Windows compatibility
         }
 
-        # Update default options with user-provided options
+        # Update default options with user-provided options, if any
         if options:
             default_opts.update(options)
 
+        # Create strategy instances
+        direct_strategy = DirectHitDownloadStrategy(self.logger)
+        impersonate_strategy = ImpersonateDownloadStrategy(self.logger)
+
+        # First attempt: try direct hit
         try:
-            with yt_dlp.YoutubeDL(default_opts) as ydl:
-                # Extract video information
-                info_dict = ydl.extract_info(url, download=True)
-                self.logger.info(f"Downloaded video info: {info_dict}")
-                # Prepare return information
-                return {
-                    "success": True,
-                    "title": info_dict.get("title"),
-                    "filename": ydl.prepare_filename(info_dict),
-                    "url": url,
-                    "extractor": info_dict.get("extractor"),
-                    "download_directory": self.output_dir,
-                }
+            info_dict = direct_strategy.download(url, default_opts.copy())
+            return {
+                "success": True,
+                "title": info_dict.get("title"),
+                "filename": info_dict.get("filename"),
+                "url": url,
+                "extractor": info_dict.get("extractor"),
+                "download_directory": self.output_dir,
+            }
+        except Exception as e_direct:
+            self.logger.error(f"Direct download failed: {str(e_direct)}")
+            self.logger.info("Retrying with impersonation...")
 
-        except Exception as e:
-            self.logger.error(f"Error downloading video: {str(e)}")
+        # Second attempt: try impersonation strategy
+        try:
+            info_dict = impersonate_strategy.download(url, default_opts.copy())
+            return {
+                "success": True,
+                "title": info_dict.get("title"),
+                "filename": info_dict.get("filename"),
+                "url": url,
+                "extractor": info_dict.get("extractor"),
+                "download_directory": self.output_dir,
+            }
+        except Exception as e_impersonate:
+            self.logger.error(f"Error downloading video with impersonation: {str(e_impersonate)}")
             self.logger.error(traceback.format_exc())
-            return {"success": False, "error": str(e), "url": url}
-
-
-# def download_video(url, client_id=None):
-#     """
-#     Convenience function for quick video downloads.
-
-#     :param url: URL of the video to download
-#     :param output_dir: Optional directory to save the video
-#     :return: Download result dictionary
-#     """
-#     try:
-#         downloader = VideoDownloader()
-#         result = downloader.download(url)
-#         return result
-#     except Exception as e:
-#         return {"success": False, "error": str(e), "filename": None}
+            return {"success": False, "error": str(e_impersonate), "url": url}
 
 
 def get_logger():

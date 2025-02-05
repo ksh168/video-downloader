@@ -59,5 +59,5 @@ def publish_message(msg_payload):
             connection.close()
 
 publish_message({
-    "url": "https://pixabay.com/videos/countdown-10-seconds-movie-2637/"
+    "url": ""
 })

@@ -53,23 +53,20 @@ def upload_file_to_s3(file_path: str, object_name: str) -> Optional[str]:
         return False
 
 
-def upload_to_s3_and_get_url(
+def upload_to_s3_and_delete_local_file(
     file_path: str, object_name: str, download_directory: str
 ) -> Optional[str]:
     """
-    Upload a file to S3 and return a presigned URL for download.
+    Upload a file to S3 and delete the local file.
 
     :param file_path: Path to the file to upload
     :param object_name: Name of the object in S3
     :param download_directory: Directory to download the file to
-    :return: Presigned URL for the uploaded object
+    :return: True if successful, False otherwise
     """
     upload_file_req = upload_file_to_s3(file_path, object_name)
+    delete_local_file(download_directory)
+
     if upload_file_req:
-        # presigned_url = get_s3_presigned_url(S3_BUCKET_NAME, uploaded_object_name)
-
-        delete_local_file(download_directory)
-
-        # return presigned_url
         return True
     return False

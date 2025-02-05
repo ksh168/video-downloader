@@ -1,6 +1,6 @@
 from utils.file_handling.sanitize_object_name import sanitize_object_name
 from utils.video_downloader import download_video_task
-from utils.s3.upload_to_s3 import upload_to_s3_and_get_url
+from utils.s3.upload_to_s3 import upload_to_s3_and_delete_local_file
 from utils.file_handling.hash_generator import generate_url_hash
 from utils.s3.get_s3_client import get_s3_client
 import os
@@ -75,7 +75,7 @@ def download_file_and_upload_to_s3(url, client_id=None):
             )
             unique_object_name = f"{url_hash}_{sanitized_name}"
 
-            upload_result = upload_to_s3_and_get_url(
+            upload_result = upload_to_s3_and_delete_local_file(
                 filename,
                 unique_object_name,
                 download_directory=download_req.get("download_directory"),
