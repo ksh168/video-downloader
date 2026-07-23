@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
-from utils.get_s3_client import get_s3_client
+from utils.s3.get_s3_client import get_s3_client
 
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 

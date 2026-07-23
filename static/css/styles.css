@@ -170,6 +170,12 @@ footer {
   padding: 10px;
 }
 
+.success {
+  color: var(--success-color);
+  text-align: center;
+  padding: 10px;
+}
+
 @media (max-width: 768px) {
   .container {
     margin: 10px;
